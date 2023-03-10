@@ -21,6 +21,7 @@ function preload(){
 
 }
 let square;
+let squares = [];
 function setup() 
 {
   createCanvas(windowWidth,windowHeight);
@@ -28,34 +29,21 @@ function setup()
   //Need to investigate this later.
   //Move();
 
-  let heights = [];
-  let rectSizes = .68;
-  while(rectSizes > 0){
-    let size = rand(rectSiz);
-    if (rectSizes - size > 0){
-      heights.add(size);
-      rectSizes = rectSizes - size;
-    }
-    if(heights.length > 4){
-      heights.add(rectSizes);
-      rectSizes = -1;
-    }
-  }
 
-  let squares = [];
+  heights = [1,2,3];
 
-  for(let i = 0; i < heights.length; i++){
-    squares.add(
-      new Square(
-        width*.16, 
-        height*.16, 
-        width*.68,
-        height*heights[i],
-        "#BBAAFF",
-        0)
-    );
-  }
-  
+  // for(let i = 0; i < heights.length; i++){
+  //   squares.push(
+  //     new Square(
+  //       width*.16, 
+  //       height*.16, 
+  //       width*.68,
+  //       height*.68,
+  //       "#BBAAFF",
+  //       -20 * 0)
+  //   );
+  // }
+
   square = new Square(
     width*.16, 
     height*.16, 
@@ -64,16 +52,43 @@ function setup()
     "#BBAAFF",
     0);
 
+  let targetSize = .68;
+  let startingSize = .16;
+  let h = startingSize;
+  let i = 0;
+  while(h <= targetSize){
+    
+    let randomSize = random(.2);
+    squares.push(new Square(
+        width*.16,
+        height*h,
+        width*.68,
+        height*randomSize,
+        "#BBAAFF",
+        20 * i
+      )
+    );
+    i++;
+    h = h + randomSize;
+    
+  }
+
   frameRate(60);
 }
+
 function windowResized(){
   setup();
 }
+
 //Draw will be used to call update and draw on the objects we need
 function draw() {
   background(220);
-  square.Update();
-  square.Draw();
+  //square.Update();
+  //square.Draw();
+  for(let i = 0; i < squares.length; i++){
+    squares[i].Update();
+    squares[i].Draw();
+  }
 }
 
 
@@ -81,7 +96,7 @@ function draw() {
 class Square{
   constructor(targetX, targetY, w, h, col, tOffset = 0)
   {
-    this.xOffScreenStart = -h*1.5; // 1.5x widths off?
+    this.xOffScreenStart = -width; // 1.5x widths off?
     this.yOffScreenStart = 0; //not used
     this.xOffScreenEnd = width;
     this.targetX = targetX; 
@@ -103,7 +118,7 @@ class Square{
     //let's say we do this over 
     //first section
     if(this.t <= 60){
-      this.SlideIn(this.t/60);
+      this.SlideIn(max(this.t/60,0));
     }
 
     if(this.t > 60 && this.t <= 180){
