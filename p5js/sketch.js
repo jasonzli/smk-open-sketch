@@ -110,7 +110,6 @@ function windowResized(){
 function draw() {
   background(backgroundColor);
   
-  drawingContext.shadow
   squares.map( (square) => {
     square.Update();
     square.Draw();
