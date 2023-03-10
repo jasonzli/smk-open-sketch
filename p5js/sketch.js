@@ -62,6 +62,8 @@ function setup()
     
     anchor = anchor + h + buffer;
   });
+
+
   
   //So now the palette dictionary and the totalCount gives us everything
 /*
@@ -108,6 +110,7 @@ function windowResized(){
 function draw() {
   background(backgroundColor);
   
+  drawingContext.shadow
   squares.map( (square) => {
     square.Update();
     square.Draw();
@@ -176,6 +179,12 @@ class Square{
     push();
     noStroke();
     fill(this.color);
+
+    // very optional shadow drawing, already weird practice with the offsets
+    // drawingContext.shadowOffsetX = 0;
+    // drawingContext.shadowOffsetY = 0;
+    // drawingContext.shadowBlur = width*.01;//width*.02* ( .5 * sin(this.t/105*TWO_PI)+.5);
+    // drawingContext.shadowColor = "black";
     translate(this.x,this.y);
     rect(0,0,this.w,this.h);
     pop();
