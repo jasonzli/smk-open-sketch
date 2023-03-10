@@ -16,32 +16,61 @@ function setup()
 
   squares = [];
 
+  //Take extractor data for color data
   let extractor = exampleData.filter( (object) => object.type == "colorextractor");
   if (extractor.length < 0){
     //leave
   }
+
+  //Set the background color
   let colorData = extractor[0].data;
   backgroundColor = colorData.bg_color_s; //background_color_suggested, in the standard api this is suggested background color
 
+  //Create the palette data
   let paletteDictionary = {};
   colorData.colors_palette?.map( (colorString) => {
     paletteDictionary[colorString] = 0;
   });
-  console.log(paletteDictionary);
+
   let totalCount = 0;
   let weightedPaletteStrings = colorData.colors_palette_weighted_s.split(' ');
   weightedPaletteStrings.forEach( (colorString, i) =>{
     paletteDictionary[colorString] += 1;
     totalCount++;
   });
-  console.log(paletteDictionary);
-
+  //let's do this simply first
+  let paletteKeys = Object.keys(paletteDictionary);
+  let totalSizeRatio = .68;
+  let startingAnchor = .16;
+  let cornerPositionX = width*startingAnchor;
+  let anchor = startingAnchor;
+  let buffer = .01;
+  let bufferSpace = paletteKeys.length * buffer;
+  let availableSizeRatio = totalSizeRatio - bufferSpace;
+  
+  //for each of the keys, we create a new entry
+  paletteKeys.forEach( (key,i) => {
+    let h = paletteDictionary[key] / totalCount * availableSizeRatio;
+    squares.push(new Square(
+      cornerPositionX,
+      height * anchor,
+      width * (.68),
+      height*h,
+      key,
+      i * 10
+    ));
+    
+    anchor = anchor + h + buffer;
+  });
+  
   //So now the palette dictionary and the totalCount gives us everything
-
+/*
   let targetSize = .84;
   let startingSize = .16;
   let h = startingSize;
   let i = 0;
+
+  
   while(h <= targetSize){
     
     //do a max and min to guarantee certain size constraint
@@ -67,7 +96,7 @@ function setup()
     h = h + randomSize + .01;
     
   }
-
+*/
   frameRate(60);
 }
 
