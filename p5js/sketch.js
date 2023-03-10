@@ -1,35 +1,42 @@
 
-/*
-  Make sure that the palette object looks like the following
-
-*/
-let jsonResponse = 
-    {
-      //Colors are in fucking Hex because God Himself hates you and you gon' learn today what 00->FF looks like
-      "colorPalete" : [
-        "#446644",
-        "#66CC33"
-      ],
-      //Distribution of color is not distributed like percentages but is instead a deck of cards
-      "colorDistribution": [
-
-      ]
-    };
-
 function preload(){
   //assume some osrt of preload occurs here
 
 }
 let square;
 let squares = [];
+let backgroundColor = 0;
 function setup() 
 {
   createCanvas(windowWidth,windowHeight);
 
+  console.log(exampleData[1]);
   //Need to investigate this later.
   //Move();
 
   squares = [];
+
+  let extractor = exampleData.filter( (object) => object.type == "colorextractor");
+  if (extractor.length < 0){
+    //leave
+  }
+  let colorData = extractor[0].data;
+  backgroundColor = colorData.bg_color_s; //background_color_suggested, in the standard api this is suggested background color
+
+  let paletteDictionary = {};
+  colorData.colors_palette?.map( (colorString) => {
+    paletteDictionary[colorString] = 0;
+  });
+  console.log(paletteDictionary);
+  let totalCount = 0;
+  let weightedPaletteStrings = colorData.colors_palette_weighted_s.split(' ');
+  weightedPaletteStrings.forEach( (colorString, i) =>{
+    paletteDictionary[colorString] += 1;
+    totalCount++;
+  });
+  console.log(paletteDictionary);
+
+  //So now the palette dictionary and the totalCount gives us everything
 
   let targetSize = .84;
   let startingSize = .16;
@@ -38,7 +45,7 @@ function setup()
   while(h <= targetSize){
     
     //do a max and min to guarantee certain size constraint
-    let randomSize = random(max(.14, min(.3, targetSize - h)));
+    let randomSize =max(.02,  random(min(.3, targetSize - h)));
 
     //do a check if the *next* one is going to be too small, and consume it
     if ((targetSize - (h + randomSize)) < .05 ){
@@ -55,7 +62,8 @@ function setup()
       )
     );
     i++;
-    //that .02 is a good barrier
+
+    //that .01 is a good barrier
     h = h + randomSize + .01;
     
   }
@@ -69,13 +77,13 @@ function windowResized(){
 
 //Draw will be used to call update and draw on the objects we need
 function draw() {
-  background(220);
-  //square.Update();
-  //square.Draw();
-  for(let i = 0; i < squares.length; i++){
-    squares[i].Update();
-    squares[i].Draw();
-  }
+  background(backgroundColor);
+  
+  squares.map( (square) => {
+    square.Update();
+    square.Draw();
+  });
+  
 }
 
 
