@@ -86,7 +86,7 @@ class Square{
     this.h = h;
     this.color = col;
     this.speed = 10; // canvas ratio 
-    this.t = 0 - tOffset; //time count, NOTE THAT THIS IS NEGATIVE
+    this.t = 0 - tOffset; //time count, NOTE THAT THIS IS MADE NEGATIVE
     this.animationTime = 210; // 3.5 seconds 1 + 2 + .5
   }
 
@@ -137,6 +137,4 @@ class Square{
     pop();
   }
 
-
 }
-
