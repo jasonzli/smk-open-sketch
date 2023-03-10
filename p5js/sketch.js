@@ -1,8 +1,3 @@
-
-function preload(){
-  //assume some osrt of preload occurs here
-
-}
 let square;
 let squares = [];
 let backgroundColor = 0;
@@ -10,9 +5,6 @@ function setup()
 {
   createCanvas(windowWidth,windowHeight);
 
-  console.log(exampleData[1]);
-  //Need to investigate this later.
-  //Move();
 
   squares = [];
 
@@ -63,48 +55,9 @@ function setup()
     anchor = anchor + h + buffer;
   });
 
-
-  
-  //So now the palette dictionary and the totalCount gives us everything
-/*
-  let targetSize = .84;
-  let startingSize = .16;
-  let h = startingSize;
-  let i = 0;
-
-  
-  while(h <= targetSize){
-    
-    //do a max and min to guarantee certain size constraint
-    let randomSize =max(.02,  random(min(.3, targetSize - h)));
-
-    //do a check if the *next* one is going to be too small, and consume it
-    if ((targetSize - (h + randomSize)) < .05 ){
-      randomSize = targetSize - h;
-    }
-
-    squares.push(new Square(
-        width*.16,
-        height*h,
-        width*.68,
-        height*randomSize,
-        "#BBAAFF",
-        10 * i
-      )
-    );
-    i++;
-
-    //that .01 is a good barrier
-    h = h + randomSize + .01;
-    
-  }
-*/
   frameRate(60);
 }
 
-function windowResized(){
-  setup();
-}
 
 //Draw will be used to call update and draw on the objects we need
 function draw() {
@@ -179,11 +132,6 @@ class Square{
     noStroke();
     fill(this.color);
 
-    // very optional shadow drawing, already weird practice with the offsets
-    // drawingContext.shadowOffsetX = 0;
-    // drawingContext.shadowOffsetY = 0;
-    // drawingContext.shadowBlur = width*.01;//width*.02* ( .5 * sin(this.t/105*TWO_PI)+.5);
-    // drawingContext.shadowColor = "black";
     translate(this.x,this.y);
     rect(0,0,this.w,this.h);
     pop();
@@ -192,22 +140,3 @@ class Square{
 
 }
 
-
-//Need to now create a set of cubes that match the height. 
-async function Move(){
-  await new Promise(() => {setTimeout(0,10)});
-  console.log("hello");
-}
-
-//This needs to produce two json objects separately
-function CreateRandomColorObject(){
-  //return a brand new color object
-  function CreateColorPalette(){
-
-  }
-
-  //split it into 100 or so, return a new object
-  function DistributeColor(colorPaletteObject){
-
-  }
-}
