@@ -29,47 +29,34 @@ function setup()
   //Need to investigate this later.
   //Move();
 
+  squares = [];
 
-  heights = [1,2,3];
-
-  // for(let i = 0; i < heights.length; i++){
-  //   squares.push(
-  //     new Square(
-  //       width*.16, 
-  //       height*.16, 
-  //       width*.68,
-  //       height*.68,
-  //       "#BBAAFF",
-  //       -20 * 0)
-  //   );
-  // }
-
-  square = new Square(
-    width*.16, 
-    height*.16, 
-    width*.68,
-    height*.68,
-    "#BBAAFF",
-    0);
-
-  let targetSize = .68;
+  let targetSize = .84;
   let startingSize = .16;
   let h = startingSize;
   let i = 0;
   while(h <= targetSize){
     
-    let randomSize = random(.2);
+    //do a max and min to guarantee certain size constraint
+    let randomSize = random(max(.14, min(.3, targetSize - h)));
+
+    //do a check if the *next* one is going to be too small, and consume it
+    if ((targetSize - (h + randomSize)) < .05 ){
+      randomSize = targetSize - h;
+    }
+
     squares.push(new Square(
         width*.16,
         height*h,
         width*.68,
         height*randomSize,
         "#BBAAFF",
-        20 * i
+        10 * i
       )
     );
     i++;
-    h = h + randomSize;
+    //that .02 is a good barrier
+    h = h + randomSize + .01;
     
   }
 
