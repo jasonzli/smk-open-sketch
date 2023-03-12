@@ -2,6 +2,7 @@
 //Essentials that we need across the scope
 let squares = [];
 let backgroundColor = 0;
+let chosenItem = 0;
 const REQUEST_SIZE = 2000;
 
 let jsonResponse;
@@ -16,6 +17,7 @@ async function loadSMKAPI()
   // 3. filter down to the ones with enrichment urls
   // 4. filter *further* into the ones that have color palettes
 
+  console.log("Beginning loading");
   //1. get the initial ping that shows us how many there are
   const initialPing = await fetch("https://api.smk.dk/api/v1/art/search/?keys=*&offset=0&rows=1");
   let pingResults = await initialPing.json();
@@ -25,6 +27,7 @@ async function loadSMKAPI()
   console.log(totalCount);
 
   // 2. get a random one of many
+  console.log("Starting to get all random urls...");
   const randomSurvey = await fetch(`https://api.smk.dk/api/v1/art/search/?keys=*&offset=${randomOffset}&rows=${REQUEST_SIZE}`);
   let surveyResults = await randomSurvey.json();
   console.log(surveyResults);
@@ -47,10 +50,12 @@ async function loadSMKAPI()
                       });
       enrichmentChunks.push(chunk);
   }
+  console.log("Hit all random URLs");
 
+  console.log("Pinging enrichment...");
   //Ping all the urls and get the response. yes this is a mess
   for(let i = 0; i < enrichmentChunks.length; i++){
-    await new Promise(resolve => setTimeout(resolve, 125));
+    //await new Promise(resolve => setTimeout(resolve, 125));
     enrichmentChunks[i] = await Promise.all( 
       enrichmentChunks[i].map ( 
         async (url) => 
@@ -69,6 +74,7 @@ async function loadSMKAPI()
     );
   }
 
+  console.log("Filtering results...");
   //Add all enrichments into the items array after clearing space for it.
   enrichmentItems = [];
   for(let i = 0; i < enrichmentChunks.length; i++){
@@ -89,7 +95,7 @@ async function loadSMKAPI()
       
       //Push the data into the array
       if(colorDataExists){
-        enrichmentItems.push(colorExtractor.data)
+        enrichmentItems.push(colorExtractor)
       }
     });
   }
@@ -120,6 +126,7 @@ async function setup()
   if (pingedResponse.length < 1){
     console.log(`Data is empty`);
     extractor = jsonResponse.filter( (object) => object.type == "colorextractor");
+    pingedResponse = jsonResponse;
   }
  
   Reset();
@@ -129,10 +136,19 @@ function Reset(){
   SelectNewPainting();
 }
 function SelectNewPainting(){
-  let chosenPalette = pingedResponse[floor(random()*pingedResponse.length)];
-  backgroundColor = chosenPalette.bg_color_s;
+
+  let newChoice = floor(random()*pingedResponse.length);
+  while (newChoice == chosenItem){
+    newChoice = floor(random()*pingedResponse.length);
+  }
+  chosenItem = newChoice;
+  let chosenPalette = pingedResponse[chosenItem].data; //get the data from palette
+  backgroundColor = chosenPalette.color_background_s;
   squares = PaletteSquares(chosenPalette);
+  
+  console.log(`Current item is: ${pingedResponse[chosenItem].id}`);
 }
+
 function windowResized(){
   if(loaded){
     createCanvas(windowWidth,windowHeight);
@@ -144,6 +160,9 @@ function keyPressed(){
     if (keyCode == 32) // space
     {
       Reset();
+    }
+    if (keyCode == 83){
+      console.log(`Current item is: ${pingedResponse[chosenItem].id}`);
     }
   }
 }
