@@ -2,9 +2,11 @@
 //Essentials that we need across the scope
 let squares = [];
 let backgroundColor = 0;
-const REQUEST_SIZE = 500;
+const REQUEST_SIZE = 2000;
 
 let jsonResponse;
+let pingedResponse;
+let loaded = false;
 
 async function loadSMKAPI()
 {
@@ -29,12 +31,10 @@ async function loadSMKAPI()
 
   // 3. filter down to the ones with enrichment urls
   let surveyItems = surveyResults.items;
-  console.log(surveyItems);
   
   // 3b. confirm enrichment urls
   const ENRICHMENT_URL = "enrichment_url";
   let enrichmentItems = surveyItems.filter( (object) => !object.hasOwnProperty('part_of') && object.hasOwnProperty(ENRICHMENT_URL));
-  console.log(enrichmentItems);
 
   // 3b. split into chunks
   const chunkSize = 50;
@@ -68,7 +68,7 @@ async function loadSMKAPI()
       )
     );
   }
-  console.log(enrichmentChunks);
+
   //Add all enrichments into the items array after clearing space for it.
   enrichmentItems = [];
   for(let i = 0; i < enrichmentChunks.length; i++){
@@ -76,6 +76,8 @@ async function loadSMKAPI()
       //sometimes the extractors are not in the same order...
       //and sometimes there are overlaps
       //we have to make sure we have the color extractor
+      if (enrichmentResponse == undefined) return;
+
       let colorExtractor = enrichmentResponse.filter((object) => object.type == 'colorextractor')[0];
       
       //confirm that the data exists as we need
@@ -96,33 +98,54 @@ async function loadSMKAPI()
 
   //Finalize the items
   console.log(enrichmentItems);
-  
+  pingedResponse = enrichmentItems;
 
-  //
+  //Standarized response
   jsonResponse = await fetch("https://enrichment.api.smk.dk/api/enrichment/KMS1?lang=en");
   jsonResponse = await jsonResponse.json();
+
+  loaded = true;
 }
 
 
 async function setup() 
 {
   createCanvas(windowWidth,windowHeight);
+  frameRate(60);
 
   await loadSMKAPI();
 
   //Take extractor data for color data
-  let extractor = jsonResponse.filter( (object) => object.type == "colorextractor");
-  if (extractor.length < 0){
-    console.log(`Data is empty`)
+  let extractor = pingedResponse;
+  if (pingedResponse.length < 1){
+    console.log(`Data is empty`);
+    extractor = jsonResponse.filter( (object) => object.type == "colorextractor");
   }
-
-  squares = PaletteSquares(extractor[0].data);
-  
-  frameRate(60);
+ 
+  Reset();
 }
 
+function Reset(){
+  SelectNewPainting();
+}
+function SelectNewPainting(){
+  let chosenPalette = pingedResponse[floor(random()*pingedResponse.length)];
+  backgroundColor = chosenPalette.bg_color_s;
+  squares = PaletteSquares(chosenPalette);
+}
 function windowResized(){
-  setup();
+  if(loaded){
+    createCanvas(windowWidth,windowHeight);
+  }
+}
+
+function keyPressed(){
+  if(loaded){
+    if (keyCode == 32) // space
+    {
+      Reset();
+    }
+  }
 }
 
 //Draw will be used to call update and draw on the objects we need
@@ -138,13 +161,12 @@ function draw() {
 
 //This function takes the data from the colorextractor features of the SMK enrichment API
 //And processes it into a set of palette distributions that can be use to draw the squares on the screen
-function PaletteSquares(extractorData){
+function PaletteSquares(paletteData){
 
   let squares = [];
 
   //Set the background color
-  let colorData = extractorData;
-  backgroundColor = colorData.bg_color_s; //background_color_suggested, in the standard api this is suggested background color
+  let colorData = paletteData;
 
   //Create the palette dictionary with counts
   let paletteDictionary = {};
