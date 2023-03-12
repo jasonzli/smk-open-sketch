@@ -1,63 +1,152 @@
-let square;
+
+//Essentials that we need across the scope
 let squares = [];
 let backgroundColor = 0;
-function setup() 
+const REQUEST_SIZE = 2000;
+
+let jsonResponse;
+let pingedResponse;
+let loaded = false;
+
+async function loadSMKAPI()
 {
-  createCanvas(windowWidth,windowHeight);
+  //ok so we're gonna do some nonsense
+  // 1. get the initial ping that shows us how many there are
+  // 2. get a random one of many
+  // 3. filter down to the ones with enrichment urls
+  // 4. filter *further* into the ones that have color palettes
 
+  //1. get the initial ping that shows us how many there are
+  const initialPing = await fetch("https://api.smk.dk/api/v1/art/search/?keys=*&offset=0&rows=1");
+  let pingResults = await initialPing.json();
 
-  squares = [];
+  let totalCount = pingResults.found;
+  let randomOffset = await min(totalCount-2000, max(0,floor(random() * totalCount)));
+  console.log(totalCount);
 
-  //Take extractor data for color data
-  let extractor = exampleData.filter( (object) => object.type == "colorextractor");
-  if (extractor.length < 0){
-    //leave
+  // 2. get a random one of many
+  const randomSurvey = await fetch(`https://api.smk.dk/api/v1/art/search/?keys=*&offset=${randomOffset}&rows=${REQUEST_SIZE}`);
+  let surveyResults = await randomSurvey.json();
+  console.log(surveyResults);
+
+  // 3. filter down to the ones with enrichment urls
+  let surveyItems = surveyResults.items;
+  
+  // 3b. confirm enrichment urls
+  const ENRICHMENT_URL = "enrichment_url";
+  let enrichmentItems = surveyItems.filter( (object) => !object.hasOwnProperty('part_of') && object.hasOwnProperty(ENRICHMENT_URL));
+
+  // 3b. split into chunks
+  const chunkSize = 50;
+  let enrichmentChunks = [];
+  for (let i = 0; i < enrichmentItems.length; i += chunkSize) {
+      const chunk = enrichmentItems
+                      .slice(i, i + chunkSize)
+                      .map((item) => {
+                        return item.enrichment_url;
+                      });
+      enrichmentChunks.push(chunk);
   }
 
-  //Set the background color
-  let colorData = extractor[0].data;
-  backgroundColor = colorData.bg_color_s; //background_color_suggested, in the standard api this is suggested background color
+  //Ping all the urls and get the response. yes this is a mess
+  for(let i = 0; i < enrichmentChunks.length; i++){
+    await new Promise(resolve => setTimeout(resolve, 125));
+    enrichmentChunks[i] = await Promise.all( 
+      enrichmentChunks[i].map ( 
+        async (url) => 
+          {
+            return await fetch(url)
+              .then(async (response) => 
+                  {
+                    if (response.ok){
+                      return await response.json();
+                    }
+                    throw new Error(`Some error occurred with ${response.url}`);
+                  })
+              .catch((error) => console.log(error)) 
+          }
+      )
+    );
+  }
 
-  //Create the palette data
-  let paletteDictionary = {};
-  colorData.colors_palette?.map( (colorString) => {
-    paletteDictionary[colorString] = 0;
-  });
+  //Add all enrichments into the items array after clearing space for it.
+  enrichmentItems = [];
+  for(let i = 0; i < enrichmentChunks.length; i++){
+    enrichmentChunks[i].map( (enrichmentResponse) => {
+      //sometimes the extractors are not in the same order...
+      //and sometimes there are overlaps
+      //we have to make sure we have the color extractor
+      if (enrichmentResponse == undefined) return;
 
-  let totalCount = 0;
-  let weightedPaletteStrings = colorData.colors_palette_weighted_s.split(' ');
-  weightedPaletteStrings.forEach( (colorString, i) =>{
-    paletteDictionary[colorString] += 1;
-    totalCount++;
-  });
-  //let's do this simply first
-  let paletteKeys = Object.keys(paletteDictionary);
-  let totalSizeRatio = .68;
-  let startingAnchor = .16;
-  let cornerPositionX = width*startingAnchor;
-  let anchor = startingAnchor;
-  let buffer = .01;
-  let bufferSpace = paletteKeys.length * buffer;
-  let availableSizeRatio = totalSizeRatio - bufferSpace;
-  
-  //for each of the keys, we create a new entry
-  paletteKeys.forEach( (key,i) => {
-    let h = paletteDictionary[key] / totalCount * availableSizeRatio;
-    squares.push(new Square(
-      cornerPositionX,
-      height * anchor,
-      width * (.68),
-      height*h,
-      key,
-      i * 10
-    ));
-    
-    anchor = anchor + h + buffer;
-  });
+      let colorExtractor = enrichmentResponse.filter((object) => object.type == 'colorextractor')[0];
+      
+      //confirm that the data exists as we need
+      let colorDataExists = 
+        colorExtractor.data.hasOwnProperty("colors_palette") &&
+        colorExtractor.data.hasOwnProperty("colors_palette_weighted_s") &&
+        colorExtractor.data.hasOwnProperty("color_background_s") &&
+        colorExtractor.data.hasOwnProperty("bg_color_s");
+      
+      //Push the data into the array
+      if(colorDataExists){
+        enrichmentItems.push(colorExtractor.data)
+      }
+    });
+  }
+  //Chunks has everything
+  console.log(`Ping resulted in ${enrichmentItems.length} candidate urls`);
 
-  frameRate(60);
+  //Finalize the items
+  console.log(enrichmentItems);
+  pingedResponse = enrichmentItems;
+
+  //Standarized response
+  jsonResponse = await fetch("https://enrichment.api.smk.dk/api/enrichment/KMS1?lang=en");
+  jsonResponse = await jsonResponse.json();
+
+  loaded = true;
 }
 
+
+async function setup() 
+{
+  createCanvas(windowWidth,windowHeight);
+  frameRate(60);
+
+  await loadSMKAPI();
+
+  //Take extractor data for color data
+  let extractor = pingedResponse;
+  if (pingedResponse.length < 1){
+    console.log(`Data is empty`);
+    extractor = jsonResponse.filter( (object) => object.type == "colorextractor");
+  }
+ 
+  Reset();
+}
+
+function Reset(){
+  SelectNewPainting();
+}
+function SelectNewPainting(){
+  let chosenPalette = pingedResponse[floor(random()*pingedResponse.length)];
+  backgroundColor = chosenPalette.bg_color_s;
+  squares = PaletteSquares(chosenPalette);
+}
+function windowResized(){
+  if(loaded){
+    createCanvas(windowWidth,windowHeight);
+  }
+}
+
+function keyPressed(){
+  if(loaded){
+    if (keyCode == 32) // space
+    {
+      Reset();
+    }
+  }
+}
 
 //Draw will be used to call update and draw on the objects we need
 function draw() {
@@ -70,8 +159,73 @@ function draw() {
   
 }
 
+//This function takes the data from the colorextractor features of the SMK enrichment API
+//And processes it into a set of palette distributions that can be use to draw the squares on the screen
+function PaletteSquares(paletteData){
 
+  let squares = [];
 
+  //Set the background color
+  let colorData = paletteData;
+
+  //Create the palette dictionary with counts
+  let paletteDictionary = {};
+  colorData.colors_palette?.map( (colorString) => {
+    paletteDictionary[colorString] = 0;
+  });
+
+  //Increment the counts into the dictionary and create
+  let totalCount = 0;
+  let weightedPaletteStrings = colorData.colors_palette_weighted_s.split(' ');
+  weightedPaletteStrings.forEach( (colorString, i) =>{
+    paletteDictionary[colorString] += 1;
+    totalCount++;
+  });
+
+  //Set all the essential values that we need
+  let paletteKeys = Object.keys(paletteDictionary);
+  let totalSizeRatio = .68;
+  let startingAnchor = .16;
+  let cornerPositionX = width*startingAnchor;
+  let anchor = startingAnchor;
+  let buffer = .01; //1% buffers between segments
+  let bufferSpace = paletteKeys.length * buffer;
+  let availableSizeRatio = totalSizeRatio - bufferSpace; //should be reduced somewhat
+  
+  //for each of the keys, we create a new entry
+  paletteKeys.forEach( (key,i) => {
+    //determine how much of the available size we should use 
+    let h = paletteDictionary[key] / totalCount * availableSizeRatio;
+
+    squares.push(new Square(
+      cornerPositionX,    //left position
+      height * anchor,    //top positoin
+      width * (.68),      //horizontal size
+      height*h,           //height from ratio
+      key,                //the color
+      i * 10              //time delay
+    ));
+    
+    anchor = anchor + h + buffer;
+  });
+
+  return squares;
+}
+
+//Squares have are deferred into two parts that update
+//What would be good is to apply actions to objects rather than... the objects housing the actions.
+/*
+
+function AnimationIn(Object O){
+  //the animation in
+}
+
+this is what we should do
+
+and then the animator itself holds those.
+
+Instead this square has tons of details about its motion that it doesn't need.
+*/
 class Square{
   constructor(targetX, targetY, w, h, col, tOffset = 0)
   {
