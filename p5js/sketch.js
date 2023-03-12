@@ -2,48 +2,118 @@
 //Essentials that we need across the scope
 let squares = [];
 let backgroundColor = 0;
+const REQUEST_SIZE = 500;
 
 let jsonResponse;
-async function preload()
+
+async function loadSMKAPI()
 {
-  const enrichmentURL = "enrichment_url";
   //ok so we're gonna do some nonsense
   // 1. get the initial ping that shows us how many there are
   // 2. get a random one of many
   // 3. filter down to the ones with enrichment urls
   // 4. filter *further* into the ones that have color palettes
 
-  // 1. get the initial ping that shows us how many there are
-  // const initialPing = await fetch("https://api.smk.dk/api/v1/art/search/?keys=*&offset=0&rows=1");
-  // await new Promise((resolve) => {
-  //   setTimeout(() => {}, 2000);
-  // });
-  // let totalCount = initialPing.json().found;
-  // let randomOffset = min(totalCount-2000, max(0,floor(random() * totalCount)));
+  //1. get the initial ping that shows us how many there are
+  const initialPing = await fetch("https://api.smk.dk/api/v1/art/search/?keys=*&offset=0&rows=1");
+  let pingResults = await initialPing.json();
 
-  // // 2. get a random one of many
-  // const randomSurvey = await fetch(`https://api.smk.dk/api/v1/art/search/?keys=*&offset=${randomOffset}&rows=2000`);
-  // await new Promise((resolve) => {
-  //   setTimeout(() => {}, 2000);
-  // });
-  // // 3. filter down to the ones with enrichment urls
-  // let surveyedItems = randomSurvey.json().items;
-  // let enrichmentItems = surveyedItems.filter( (object) => object.hasOwnProperty(enrichmentURL));
-  // console.log(enrichmentItems);
+  let totalCount = pingResults.found;
+  let randomOffset = await min(totalCount-2000, max(0,floor(random() * totalCount)));
+  console.log(totalCount);
 
+  // 2. get a random one of many
+  const randomSurvey = await fetch(`https://api.smk.dk/api/v1/art/search/?keys=*&offset=${randomOffset}&rows=${REQUEST_SIZE}`);
+  let surveyResults = await randomSurvey.json();
+  console.log(surveyResults);
 
+  // 3. filter down to the ones with enrichment urls
+  let surveyItems = surveyResults.items;
+  console.log(surveyItems);
+  
+  // 3b. confirm enrichment urls
+  const ENRICHMENT_URL = "enrichment_url";
+  let enrichmentItems = surveyItems.filter( (object) => !object.hasOwnProperty('part_of') && object.hasOwnProperty(ENRICHMENT_URL));
+  console.log(enrichmentItems);
+
+  // 3b. split into chunks
+  const chunkSize = 50;
+  let enrichmentChunks = [];
+  for (let i = 0; i < enrichmentItems.length; i += chunkSize) {
+      const chunk = enrichmentItems
+                      .slice(i, i + chunkSize)
+                      .map((item) => {
+                        return item.enrichment_url;
+                      });
+      enrichmentChunks.push(chunk);
+  }
+
+  //Ping all the urls and get the response. yes this is a mess
+  for(let i = 0; i < enrichmentChunks.length; i++){
+    await new Promise(resolve => setTimeout(resolve, 125));
+    enrichmentChunks[i] = await Promise.all( 
+      enrichmentChunks[i].map ( 
+        async (url) => 
+          {
+            return await fetch(url)
+              .then(async (response) => 
+                  {
+                    if (response.ok){
+                      return await response.json();
+                    }
+                    throw new Error(`Some error occurred with ${response.url}`);
+                  })
+              .catch((error) => console.log(error)) 
+          }
+      )
+    );
+  }
+  console.log(enrichmentChunks);
+  //Add all enrichments into the items array after clearing space for it.
+  enrichmentItems = [];
+  for(let i = 0; i < enrichmentChunks.length; i++){
+    enrichmentChunks[i].map( (enrichmentResponse) => {
+      //sometimes the extractors are not in the same order...
+      //and sometimes there are overlaps
+      //we have to make sure we have the color extractor
+      let colorExtractor = enrichmentResponse.filter((object) => object.type == 'colorextractor')[0];
+      
+      //confirm that the data exists as we need
+      let colorDataExists = 
+        colorExtractor.data.hasOwnProperty("colors_palette") &&
+        colorExtractor.data.hasOwnProperty("colors_palette_weighted_s") &&
+        colorExtractor.data.hasOwnProperty("color_background_s") &&
+        colorExtractor.data.hasOwnProperty("bg_color_s");
+      
+      //Push the data into the array
+      if(colorDataExists){
+        enrichmentItems.push(colorExtractor.data)
+      }
+    });
+  }
+  //Chunks has everything
+  console.log(`Ping resulted in ${enrichmentItems.length} candidate urls`);
+
+  //Finalize the items
+  console.log(enrichmentItems);
+  
+
+  //
   jsonResponse = await fetch("https://enrichment.api.smk.dk/api/enrichment/KMS1?lang=en");
   jsonResponse = await jsonResponse.json();
 }
+
 
 async function setup() 
 {
   createCanvas(windowWidth,windowHeight);
 
+  await loadSMKAPI();
+
   //Take extractor data for color data
   let extractor = jsonResponse.filter( (object) => object.type == "colorextractor");
   if (extractor.length < 0){
-    return;
+    console.log(`Data is empty`)
   }
 
   squares = PaletteSquares(extractor[0].data);
