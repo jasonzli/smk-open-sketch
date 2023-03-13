@@ -118,7 +118,6 @@ async function loadSMKAPI()
   loaded = true;
 }
 
-
 async function setup() 
 {
   createCanvas(windowWidth,windowHeight);
