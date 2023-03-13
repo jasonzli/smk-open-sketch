@@ -7,6 +7,7 @@ const REQUEST_SIZE = 2000;
 
 let jsonResponse;
 let objectNameMap = {};
+let objectUrlMap = {};
 let pingedResponse;
 let loaded = false;
 
@@ -36,6 +37,7 @@ async function loadSMKAPI()
   //Create object name map
   surveyResults.items.map( (object) => {
     objectNameMap[object.object_number] = object.titles[0].title;
+    objectUrlMap[object.object_number] = object.frontend_url;
   });
 
   // 3. filter down to the ones with enrichment urls
@@ -138,6 +140,7 @@ async function setup()
 }
 
 function Reset(){
+  removeElements();
   SelectNewPainting();
 }
 function SelectNewPainting(){
@@ -190,6 +193,8 @@ function draw() {
     //invert color
     fill(color(255-r,255-g,255-b));
     textSize(width*.02);
+    let a = createA(objectUrlMap[pingedResponse[chosenItem].id],"View on SMK");
+    a.position(width*.16, height-height*.12-width*.023);
     text(` ${pingedResponse[chosenItem].id} : ${objectNameMap[pingedResponse[chosenItem].id]}`, width*.16, height*.12);
     pop();
 
