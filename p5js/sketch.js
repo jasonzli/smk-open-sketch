@@ -6,6 +6,7 @@ let chosenItem = 0;
 const REQUEST_SIZE = 2000;
 
 let jsonResponse;
+let objectNameMap = {};
 let pingedResponse;
 let loaded = false;
 
@@ -31,6 +32,11 @@ async function loadSMKAPI()
   const randomSurvey = await fetch(`https://api.smk.dk/api/v1/art/search/?keys=*&offset=${randomOffset}&rows=${REQUEST_SIZE}`);
   let surveyResults = await randomSurvey.json();
   console.log(surveyResults);
+
+  //Create object name map
+  surveyResults.items.map( (object) => {
+    objectNameMap[object.object_number] = object.titles[0].title;
+  });
 
   // 3. filter down to the ones with enrichment urls
   let surveyItems = surveyResults.items;
@@ -183,8 +189,8 @@ function draw() {
 
     //invert color
     fill(color(255-r,255-g,255-b));
-    textSize(width*.03);
-    text(`Artwork Object: ${pingedResponse[chosenItem].id}`, width*.16, height*.12);
+    textSize(width*.02);
+    text(` ${pingedResponse[chosenItem].id} : ${objectNameMap[pingedResponse[chosenItem].id]}`, width*.16, height*.12);
     pop();
 
 
