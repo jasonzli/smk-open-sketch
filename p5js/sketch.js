@@ -11,7 +11,11 @@ let loaded = false;
 let editorialFont;
 
 function preload(){
+  try{
   editorialFont = loadFont("libraries/PP_EN.ttf");
+  }catch(error){
+    console.log("Font is not available");
+  }
 }
 
 async function loadSMKAPI()
