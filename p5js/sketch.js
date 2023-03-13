@@ -11,7 +11,7 @@ let loaded = false;
 let editorialFont;
 
 function preload(){
-  editorialFont = loadFont("libraries/PPE_EN.ttf");
+  editorialFont = loadFont("libraries/PP_EN.ttf");
 }
 
 async function loadSMKAPI()
