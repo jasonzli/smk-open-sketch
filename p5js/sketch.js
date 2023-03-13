@@ -8,15 +8,6 @@ const REQUEST_SIZE = 2000;
 let jsonResponse;
 let pingedResponse;
 let loaded = false;
-let editorialFont;
-
-function preload(){
-  try{
-  editorialFont = loadFont("libraries/PP_EN.ttf");
-  }catch(error){
-    console.log("Font is not available");
-  }
-}
 
 async function loadSMKAPI()
 {
@@ -126,10 +117,6 @@ async function setup()
 {
   createCanvas(windowWidth,windowHeight);
   frameRate(60);
-  if(editorialFont != undefined){
-    console.log("Special font not detected");
-    textFont(editorialFont);
-  }
 
   await loadSMKAPI();
 
