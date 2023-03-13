@@ -8,6 +8,11 @@ const REQUEST_SIZE = 2000;
 let jsonResponse;
 let pingedResponse;
 let loaded = false;
+let editorialFont;
+
+function preload(){
+  editorialFont = loadFont("libraries/PPE_EN.ttf");
+}
 
 async function loadSMKAPI()
 {
@@ -118,6 +123,10 @@ async function setup()
 {
   createCanvas(windowWidth,windowHeight);
   frameRate(60);
+  if(editorialFont != undefined){
+    console.log("Special font not detected");
+    textFont(editorialFont);
+  }
 
   await loadSMKAPI();
 
@@ -145,7 +154,7 @@ function SelectNewPainting(){
   let chosenPalette = pingedResponse[chosenItem].data; //get the data from palette
   backgroundColor = chosenPalette.color_background_s;
   squares = PaletteSquares(chosenPalette);
-  
+
   console.log(`Current item is: ${pingedResponse[chosenItem].id}`);
 }
 
@@ -169,12 +178,31 @@ function keyPressed(){
 
 //Draw will be used to call update and draw on the objects we need
 function draw() {
-  background(backgroundColor);
+  if(loaded){
+    background(backgroundColor);
   
-  squares.map( (square) => {
-    square.Update();
-    square.Draw();
-  });
+    //This gets an inverted color of the background
+    push();
+    let hex = backgroundColor.replace('#', '');
+
+    var bigint = parseInt(hex, 16);
+
+    var r = (bigint >> 16) & 255;
+    var g = (bigint >> 8) & 255;
+    var b = bigint & 255;
+
+    //invert color
+    fill(color(255-r,255-g,255-b));
+    textSize(width*.03);
+    text(`Artwork Object: ${pingedResponse[chosenItem].id}`, width*.16, height*.12);
+    pop();
+
+
+    squares.map( (square) => {
+      square.Update();
+      square.Draw();
+    });
+  }
   
 }
 
